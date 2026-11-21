@@ -31,7 +31,7 @@ async function vapid(env, endpoint) {
   return `vapid t=${h}.${c}.${b64u(sig)}, k=${env.VAPID_PUBLIC}`;
 }
 async function push(env, endpoint) {
-  try { return (await fetch(endpoint, { method: 'POST', headers: { Authorization: await vapid(env, endpoint), TTL: '3600', Urgency: 'normal' } })).status; } catch { return 0; }
+  try { const r = await fetch(endpoint, { method: 'POST', headers: { Authorization: await vapid(env, endpoint), TTL: '3600', Urgency: 'normal' } }); return { s: r.status, e: r.ok ? '' : (await r.text()).slice(0, 80) }; } catch (e) { return { s: 0, e: String((e && e.message) || e).slice(0, 80) }; }
 }
 export async function onRequest({ request: req, env, params }) {
   const p = [].concat(params.path || []).join('/');
@@ -102,9 +102,10 @@ export async function onRequest({ request: req, env, params }) {
       : env.DB.prepare('SELECT id,endpoint FROM subs WHERE id>? ORDER BY id LIMIT 40').bind(after);
     const { results } = await st.all();
     const codes = await Promise.all(results.map(r => push(env, r.endpoint)));
-    const dead = results.filter((r, i) => codes[i] === 404 || codes[i] === 410).map(r => r.id);
+    const dead = results.filter((r, i) => codes[i].s === 404 || codes[i].s === 410).map(r => r.id);
     if (dead.length) await env.DB.prepare(`DELETE FROM subs WHERE id IN (${dead.map(() => '?').join(',')})`).bind(...dead).run();
-    return J({ ok: 1, sent: results.length - dead.length, next: results.length === 40 ? results[39].id : null });
+    const good = codes.filter(c => c.s >= 200 && c.s < 300).length, bad = codes.find(c => (c.s < 200 || c.s >= 300) && c.s !== 404 && c.s !== 410);
+    return J({ ok: 1, sent: good, failed: results.length - good - dead.length, err: bad ? bad.s + ' ' + bad.e : '', next: results.length === 40 ? results[39].id : null });
   }
   if (p === 'planimport') {
     const subject = String(b.subject || '').trim().slice(0, 100), grade = String(b.grade || '').trim().slice(0, 60), section = String(b.section || '').trim().slice(0, 60);
