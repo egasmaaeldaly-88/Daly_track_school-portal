@@ -23,12 +23,14 @@ const NEED = { homework: ['date', 'subject', 'text'], plan: ['date', 'subject', 
 // السيرفر لا يرسل إلا لخدمات الإشعارات المعروفة (حماية من تسجيل روابط عشوائية)
 const PUSH_HOST = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9.-]+\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9.-]+\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com)\//;
 const ipHash = async (req, env) => (await sign(env, 'ip:' + (req.headers.get('CF-Connecting-IP') || ''))).slice(0, 16);
+// ينظّف المفتاح العام من المسافات والاقتباسات وأي "VAPID_PUBLIC =" لصقها بالغلط
+const vkey = env => String(env.VAPID_PUBLIC || '').replace(/^.*=\s*/, '').replace(/[\s"'`]/g, '').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 async function vapid(env, endpoint) {
   const h = b64u(enc.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
   const c = b64u(enc.encode(JSON.stringify({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 43200, sub: env.VAPID_SUBJECT || 'mailto:admin@example.com' })));
   const key = await crypto.subtle.importKey('jwk', JSON.parse(env.VAPID_PRIVATE), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, enc.encode(h + '.' + c));
-  return `vapid t=${h}.${c}.${b64u(sig)}, k=${env.VAPID_PUBLIC}`;
+  return `vapid t=${h}.${c}.${b64u(sig)}, k=${vkey(env)}`;
 }
 async function push(env, endpoint) {
   try { const r = await fetch(endpoint, { method: 'POST', headers: { Authorization: await vapid(env, endpoint), TTL: '3600', Urgency: 'normal' } }); return { s: r.status, e: r.ok ? '' : (await r.text()).slice(0, 80) }; } catch (e) { return { s: 0, e: String((e && e.message) || e).slice(0, 80) }; }
@@ -37,7 +39,7 @@ export async function onRequest({ request: req, env, params }) {
   const p = [].concat(params.path || []).join('/');
   if (!env.DB || !env.TEACHER_PASSWORD) return J({ error: 'not configured' }, 500);
   if (req.method === 'GET') {
-    if (p === 'push-key') return J({ key: env.VAPID_PUBLIC || '' });
+    if (p === 'push-key') return J({ key: vkey(env) });
     if (p === 'latest') return J((await env.DB.prepare("SELECT kind,subject,title FROM items WHERE kind IN ('homework','announcement') ORDER BY id DESC LIMIT 1").first()) || {});
     if (p === 'data') {
       const a = await authed(req, env);
