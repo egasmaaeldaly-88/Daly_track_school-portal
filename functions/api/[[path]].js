@@ -49,7 +49,7 @@ export async function onRequest({ request: req, env, params }) {
         if (r.kind === 'library') r.url = r.link;
         if (o[r.kind]) o[r.kind].push(r);
       }
-      if (a) { const rr = await env.DB.prepare("SELECT id,date,grade,subject,title,text FROM items WHERE kind='result' ORDER BY id DESC LIMIT 1000").all(); o.result = rr.results.map(r => ({ ...r, kind: 'result' })); }
+      if (a) { const rr = await env.DB.prepare("SELECT id,date,grade,section,subject,title,text FROM items WHERE kind='result' ORDER BY id DESC LIMIT 1000").all(); o.result = rr.results.map(r => ({ ...r, kind: 'result' })); }
       return J(o);
     }
     return J({ error: 'not found' }, 404);
@@ -73,14 +73,14 @@ export async function onRequest({ request: req, env, params }) {
   }
   if (p === 'logout') return J({ ok: 1 }, 200, { 'Set-Cookie': 'tk=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict' });
   if (p === 'result') {
-    const name = String(b.name || '').trim().slice(0, 60), subject = String(b.subject || '').trim().slice(0, 100), grade = String(b.grade || '').trim().slice(0, 60);
+    const name = String(b.name || '').trim().slice(0, 60), subject = String(b.subject || '').trim().slice(0, 100), grade = String(b.grade || '').trim().slice(0, 60), section = String(b.section || '').trim().slice(0, 60);
     const sc = +b.score, tt = +b.total;
     if (!name || !subject || !Number.isInteger(sc) || !Number.isInteger(tt) || tt < 1 || tt > 50 || sc < 0 || sc > tt) return J({ error: 'بيانات غير صحيحة' }, 400);
     const ip = await ipHash(req, env);
     const r1 = await env.DB.prepare("SELECT COUNT(*) c FROM items WHERE kind='result' AND type=? AND created_at>datetime('now','-1 minute')").bind(ip).first();
     const r2 = await env.DB.prepare("SELECT COUNT(*) c FROM items WHERE kind='result' AND created_at>datetime('now','-1 hour')").first();
     if (r1.c >= 10 || r2.c >= 500) return J({ error: 'محاولات كثيرة' }, 429);
-    await env.DB.prepare("INSERT INTO items(kind,date,grade,subject,title,text,type) VALUES('result',?,?,?,?,?,?)").bind(new Date().toISOString().slice(0, 10), grade, subject, name, sc + '/' + tt, ip).run();
+    await env.DB.prepare("INSERT INTO items(kind,date,grade,section,subject,title,text,type) VALUES('result',?,?,?,?,?,?,?)").bind(new Date().toISOString().slice(0, 10), grade, section, subject, name, sc + '/' + tt, ip).run();
     return J({ ok: 1 });
   }
   if (p === 'subscribe') {
