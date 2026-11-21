@@ -45,7 +45,7 @@ export async function onRequest({ request: req, env, params }) {
       const o = { homework: [], plan: [], exams: [], library: [], announcement: [], quiz: [] };
       for (const r of results) {
         if (!a) delete r.author;
-        if (r.kind === 'plan') r.from = r.date;
+        if (r.kind === 'plan') { r.from = r.date; r.to = r.coverage; }
         if (r.kind === 'library') r.url = r.link;
         if (o[r.kind]) o[r.kind].push(r);
       }
@@ -105,6 +105,26 @@ export async function onRequest({ request: req, env, params }) {
     const dead = results.filter((r, i) => codes[i] === 404 || codes[i] === 410).map(r => r.id);
     if (dead.length) await env.DB.prepare(`DELETE FROM subs WHERE id IN (${dead.map(() => '?').join(',')})`).bind(...dead).run();
     return J({ ok: 1, sent: results.length - dead.length, next: results.length === 40 ? results[39].id : null });
+  }
+  if (p === 'planimport') {
+    const subject = String(b.subject || '').trim().slice(0, 100), grade = String(b.grade || '').trim().slice(0, 60), section = String(b.section || '').trim().slice(0, 60);
+    const w = Array.isArray(b.weeks) ? b.weeks : [];
+    if (!subject) return J({ error: 'اختر المادة' }, 400);
+    if (!w.length || w.length > 60) return J({ error: 'عدد الأسابيع غير صحيح' }, 400);
+    const DT = /^\d{4}-\d{2}-\d{2}$/, rows = [];
+    for (const x of w) {
+      const f = String(x.from || ''), t = String(x.to || ''), tx = String(x.text || '').trim().slice(0, 1000);
+      if (!DT.test(f) || !DT.test(t) || !tx) return J({ error: 'بيانات أسبوع غير صحيحة' }, 400);
+      rows.push([f, t, grade, section, subject, tx]);
+    }
+    const st = [env.DB.prepare("DELETE FROM items WHERE kind='plan' AND subject=? AND COALESCE(grade,'')=? AND COALESCE(section,'')=?").bind(subject, grade, section)];
+    for (let i = 0; i < rows.length; i += 12) { const c = rows.slice(i, i + 12); st.push(env.DB.prepare("INSERT INTO items(kind,date,coverage,grade,section,subject,text) VALUES " + c.map(() => "('plan',?,?,?,?,?,?)").join(',')).bind(...c.flat())); }
+    await env.DB.batch(st);
+    return J({ ok: 1, n: rows.length });
+  }
+  if (p === 'plandelete') {
+    await env.DB.prepare("DELETE FROM items WHERE kind='plan' AND subject=? AND COALESCE(grade,'')=? AND COALESCE(section,'')=?").bind(String(b.subject || ''), String(b.grade || ''), String(b.section || '')).run();
+    return J({ ok: 1 });
   }
   if (p === 'save') {
     const k = b.kind, f = F[k];
