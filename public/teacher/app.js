@@ -1,10 +1,10 @@
 var SCHOOL=(window.PORTAL&&PORTAL.name)||"",tab="homework",items=[],msg="";
 var K={homework:{t:"الواجبات",f:[["date","التاريخ","date"],["grade","الصف"],["section","الفصل"],["subject","المادة"],["text","نص الواجب","area"],["link","رابط (اختياري)"],["author","اسمك (اختياري)"]]},
 plan:{t:"الخطة الدراسية",f:[["date","أي يوم من الأسبوع","date"],["grade","الصف"],["section","الفصل"],["subject","المادة"],["text","خطة الأسبوع","area"],["author","اسمك (اختياري)"]]},
-exams:{t:"الاختبارات",f:[["date","تاريخ الاختبار","date"],["grade","الصف"],["subject","المادة"],["title","عنوان الاختبار"],["coverage","المقرر (الدروس أو الوحدات)","area"],["link","رابط الاختبار (Google Forms أو غيره، اختياري)"],["author","اسمك (اختياري)"]]},
+exams:{t:"الاختبارات",f:[["date","تاريخ الاختبار","date"],["grade","الصف"],["section","الفصل"],["subject","المادة"],["title","عنوان الاختبار"],["coverage","المقرر (الدروس أو الوحدات)","area"],["link","رابط الاختبار (Google Forms أو غيره، اختياري)"],["author","اسمك (اختياري)"]]},
 library:{t:"المكتبة",f:[["subject","المادة"],["title","العنوان"],["type","النوع","sel"],["link","الرابط (YouTube أو Drive)"],["author","اسمك (اختياري)"]]},
-announcement:{t:"الإعلانات",f:[["date","التاريخ","date"],["title","العنوان"],["text","النص","area"],["link","رابط (اختياري)"],["author","اسمك (اختياري)"]]},
-quiz:{t:"اختبار سريع",f:[["grade","الصف"],["subject","المادة"],["title","السؤال"],["text","الخيارات (افصل بينها بعلامة |)","area"],["type","رقم الإجابة الصحيحة (1 إلى 4)","number"],["author","اسمك (اختياري)"]]},
+announcement:{t:"الإعلانات",f:[["date","التاريخ","date"],["grade","الصف"],["section","الفصل"],["title","العنوان"],["text","النص","area"],["link","رابط (اختياري)"],["author","اسمك (اختياري)"]]},
+quiz:{t:"اختبار سريع",f:[["grade","الصف"],["section","الفصل"],["subject","المادة"],["title","السؤال"],["text","الخيارات (افصل بينها بعلامة |)","area"],["type","رقم الإجابة الصحيحة (1 إلى 4)","number"],["author","اسمك (اختياري)"]]},
 results:{t:"النتائج",f:[]}};
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function api(p,b){return fetch("/api/"+p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b||{})}).then(function(r){return r.json().then(function(j){return{s:r.status,j:j}})}).catch(function(){return{s:0,j:{error:"تعذر الاتصال"}}})}

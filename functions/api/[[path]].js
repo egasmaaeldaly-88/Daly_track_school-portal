@@ -14,10 +14,10 @@ const J = (o, s = 200, h = {}) => new Response(JSON.stringify(o), { status: s, h
 const F = {
   homework: ['date', 'grade', 'section', 'subject', 'text', 'link', 'author'],
   plan: ['date', 'grade', 'section', 'subject', 'text', 'author'],
-  exams: ['date', 'grade', 'subject', 'title', 'coverage', 'link', 'author'],
+  exams: ['date', 'grade', 'section', 'subject', 'title', 'coverage', 'link', 'author'],
   library: ['subject', 'title', 'type', 'link', 'author'],
-  announcement: ['date', 'title', 'text', 'link', 'author'],
-  quiz: ['grade', 'subject', 'title', 'text', 'type', 'author']
+  announcement: ['date', 'grade', 'section', 'title', 'text', 'link', 'author'],
+  quiz: ['grade', 'section', 'subject', 'title', 'text', 'type', 'author']
 };
 const NEED = { homework: ['date', 'subject', 'text'], plan: ['date', 'subject', 'text'], exams: ['date', 'subject'], library: ['title', 'link'], announcement: ['date', 'title'], quiz: ['subject', 'title', 'text', 'type'] };
 // السيرفر لا يرسل إلا لخدمات الإشعارات المعروفة (حماية من تسجيل روابط عشوائية)
